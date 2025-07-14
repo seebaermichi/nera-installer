@@ -1,0 +1,41 @@
+{
+    "name": "@nera-static/installer",
+    "version": "1.0.0",
+    "description": "CLI tool to scaffold new Nera static site projects",
+    "bin": {
+        "nera": "./bin/cli.js"
+    },
+    "type": "module",
+    "files": [
+        "bin",
+        "src"
+    ],
+    "scripts": {
+        "test": "vitest"
+    },
+    "keywords": [
+        "nera",
+        "static-site",
+        "cli",
+        "scaffolding",
+        "starter",
+        "installer"
+    ],
+    "author": "Michael Becker",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/seebaermichi/nera-installer.git"
+    },
+    "bugs": {
+        "url": "https://github.com/seebaermichi/nera-installer/issues"
+    },
+    "homepage": "https://github.com/seebaermichi/nera-installer#readme",
+    "engines": {
+        "node": ">=18"
+    },
+    "private": false,
+    "devDependencies": {
+        "vitest": "^3.2.4"
+    }
+}

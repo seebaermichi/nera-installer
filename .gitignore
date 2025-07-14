@@ -1,0 +1,18 @@
+# Node.js
+node_modules/
+dist/
+.env
+*.log
+
+# Mac system files
+.DS_Store
+
+# Test output
+.nyc_output/
+coverage/
+.vitest/
+
+# Temp folders
+*.tmp
+*.temp
+.nera-test-*/
