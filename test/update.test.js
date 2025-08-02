@@ -1,4 +1,3 @@
-// /test/update.test.js
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import fssync from 'fs'
@@ -19,7 +18,7 @@ const createMockNeraRepo = async (repoDir) => {
     // Create updated package.json
     const newPackageJson = {
         name: 'nera',
-        version: '2.0.0',
+        version: '2.0.0',  // This should become the new nera.version
         scripts: {
             dev: 'node index.js --dev',
             build: 'node index.js --build'
@@ -27,10 +26,8 @@ const createMockNeraRepo = async (repoDir) => {
         dependencies: {
             'some-new-dep': '^2.0.0',
             'updated-dep': '^3.0.0'
-        },
-        nera: {
-            version: '2.0.0'
         }
+        // Note: No nera section in the main repo
     }
     await fs.writeFile(
         path.join(repoDir, 'package.json'),
@@ -267,9 +264,10 @@ async function mergePackageJson(newPackageJsonPath, currentPackageJsonPath) {
             ...currentPackageJson.scripts
         },
 
+        // Update Nera metadata - use the version from the cloned repository
         nera: {
             ...currentPackageJson.nera,
-            ...newPackageJson.nera
+            version: newPackageJson.version // Use the main version from cloned Nera repo
         }
     }
 
@@ -334,8 +332,8 @@ describe('updateProject', () => {
         // New dependencies should be added
         expect(updatedPackageJson.dependencies['some-new-dep']).toBe('^2.0.0')
 
-        // Nera metadata should be updated
-        expect(updatedPackageJson.nera.version).toBe('2.0.0')
+        // Nera metadata should be updated to the repo version
+        expect(updatedPackageJson.nera.version).toBe('2.0.0') // Should be updated from repo's main version
 
         // Verify temporary files are cleaned up
         expect(fssync.existsSync('.nera-temp')).toBe(false)

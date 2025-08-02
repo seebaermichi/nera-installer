@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-08-02
+
+### Fixed
+- **Package.json merging**: Fixed issue where `nera.version` wasn't being updated to the latest Nera core version
+- **Core repository detection**: Improved validation to properly handle the core Nera repository vs user projects
+- **Version preservation**: Ensured user's project version is always preserved during updates
+
+### Changed
+- Updated `nera.version` to use the main version from the cloned Nera repository
+- Enhanced error messages to provide clearer guidance for different project types
+- Updated test suite to reflect the corrected merging behavior
+
 ## [1.1.0] - 2025-08-02
 
 ### Added

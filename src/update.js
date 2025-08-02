@@ -8,8 +8,18 @@ export async function updateProject() {
 
         const packageJson = JSON.parse(await fs.readFile('package.json', 'utf-8'))
 
+        // Check if this is the core Nera repository
+        if (packageJson.name === 'nera' && packageJson.repository?.url?.includes('seebaermichi/nera')) {
+            console.log('🔧 This appears to be the core Nera repository.')
+            console.log('💡 To update the core repository, use:')
+            console.log('   git pull origin main')
+            console.log('   npm install')
+            throw new Error('Use git pull to update the core Nera repository')
+        }
+
+        // Check if this is a Nera project created with the installer
         if (!packageJson.nera || !packageJson.nera.version) {
-            throw new Error('Not a Nera project or missing version info')
+            throw new Error('Not a Nera project created with the installer. Use "nera new" to create a new project.')
         }
 
         console.log(`📦 Current Nera version: ${packageJson.nera.version}`)
