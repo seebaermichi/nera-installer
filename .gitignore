@@ -1,11 +1,21 @@
 # Node.js
 node_modules/
 dist/
+build/
 .env
+.env.local
 *.log
+npm-debug.log*
+
+# Credentials — never commit; publishing uses OIDC, not a token
+.npmrc
 
 # Mac system files
 .DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
 
 # Test output
 .nyc_output/
@@ -15,4 +25,5 @@ coverage/
 # Temp folders
 *.tmp
 *.temp
+.cache/
 .nera-test-*/

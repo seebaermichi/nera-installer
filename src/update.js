@@ -1,8 +1,29 @@
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
 
-export async function updateProject() {
+export const NERA_REPO_URL = 'https://github.com/seebaermichi/nera.git'
+
+// Note: projects scaffolded before installer 2.0.0 carry no `nera.version`
+// stamp. They are the projects this release exists to unbreak, so a missing
+// stamp is reported and tolerated rather than treated as fatal.
+const defaultInstallDependencies = () =>
+    execFileSync('npm', ['install'], { stdio: 'inherit' })
+
+export async function updateProject(options = {}) {
+    const {
+        repoUrl = NERA_REPO_URL,
+        install = true,
+        // Injectable so the rollback-on-failed-install path can be tested; a
+        // real npm failure cannot be provoked reliably from a test.
+        installDependencies = defaultInstallDependencies,
+    } = options
+
+    // Only attempt a rollback if there is something to roll back to. Restoring
+    // unconditionally makes every early validation failure print an alarming
+    // "you may need to manually restore your project" over an untouched project.
+    let backupCreated = false
+
     try {
         console.log('🔍 Checking if this is a Nera project...')
 
@@ -17,27 +38,30 @@ export async function updateProject() {
             throw new Error('Use git pull to update the core Nera repository')
         }
 
-        // Check if this is a Nera project created with the installer
-        if (!packageJson.nera || !packageJson.nera.version) {
-            throw new Error('Not a Nera project created with the installer. Use "nera new" to create a new project.')
+        const currentVersion = packageJson.nera?.version
+        if (currentVersion) {
+            console.log(`📦 Current Nera version: ${currentVersion}`)
+        } else {
+            console.log('📦 No Nera version recorded — assuming a pre-2.0.0 project.')
         }
-
-        console.log(`📦 Current Nera version: ${packageJson.nera.version}`)
         console.log('🔄 Starting update process...')
 
         // Backup user files
         const userFiles = ['pages/', 'assets/', 'config/app.yaml']
         await backupFiles(userFiles)
+        backupCreated = true
 
         // Clone latest Nera
         console.log('📥 Downloading latest Nera version...')
-        execSync('git clone https://github.com/seebaermichi/nera.git .nera-temp', { stdio: 'inherit' })
+        execFileSync('git', ['clone', repoUrl, '.nera-temp'], { stdio: 'inherit' })
 
-        // Update core files
+        // Update core files. `views/` is deliberately not updated: a Nera site
+        // is a clone of the generator, so views/layouts/layout.pug is the user's
+        // own site layout, not a vendor file. Copying it from a fresh clone
+        // would silently reset their design.
         console.log('🔧 Updating core files...')
         await updateCoreFiles([
             'src/',
-            'views/_defaults/', // New default templates
             'package.json' // Merge dependencies
         ])
 
@@ -45,13 +69,15 @@ export async function updateProject() {
         console.log('📂 Restoring your files...')
         await restoreFiles(userFiles)
 
-        // Clean up
-        await fs.rm('.nera-temp', { recursive: true, force: true })
-        await fs.rm('.nera-backup', { recursive: true, force: true })
+        // Install updated dependencies. This is fallible -- network, peer
+        // conflicts -- so the backup must still exist while it runs.
+        if (install) {
+            console.log('📦 Installing updated dependencies...')
+            await installDependencies()
+        }
 
-        // Install updated dependencies
-        console.log('📦 Installing updated dependencies...')
-        execSync('npm install', { stdio: 'inherit' })
+        // Only now, past the last fallible step, is the backup safe to drop.
+        await fs.rm('.nera-backup', { recursive: true, force: true })
 
         console.log('✅ Updated to latest Nera version!')
         console.log('👉 Run `npm run dev` to start developing')
@@ -59,19 +85,25 @@ export async function updateProject() {
     } catch (error) {
         console.error('❌ Update failed:', error.message)
 
-        // Attempt to restore from backup if it exists
-        try {
-            console.log('🔄 Attempting to restore from backup...')
-            await restoreFromBackup()
-            console.log('✅ Restored from backup successfully')
-        } catch (restoreError) {
-            console.error('❌ Failed to restore from backup:', restoreError.message)
-            console.error('⚠️  You may need to manually restore your project')
+        if (backupCreated) {
+            try {
+                console.log('🔄 Attempting to restore from backup...')
+                await restoreFromBackup()
+                console.log('✅ Restored from backup successfully')
+                console.log('💡 The backup was kept at .nera-backup')
+            } catch (restoreError) {
+                console.error('❌ Failed to restore from backup:', restoreError.message)
+                console.error('⚠️  Your files are still in .nera-backup — restore them manually')
+            }
         }
 
         // Re-throw the original error instead of calling process.exit
         // This allows proper error handling in both CLI and test environments
         throw error
+    } finally {
+        // Always, so a failed run does not leave a stale .nera-temp that makes
+        // the next `nera update` abort with "destination path already exists".
+        await fs.rm('.nera-temp', { recursive: true, force: true })
     }
 }
 
@@ -231,12 +263,27 @@ async function mergePackageJson(newPackageJsonPath, currentPackageJsonPath) {
             ...currentPackageJson.scripts // User scripts take precedence
         },
 
-        // Update Nera metadata
+        // Record the version actually cloned. Spreading `newPackageJson.nera`
+        // here instead would be a no-op -- the generator declares no `nera`
+        // key -- which would freeze the stamp at whatever `create` first wrote.
         nera: {
             ...currentPackageJson.nera,
-            ...newPackageJson.nera
+            version: newPackageJson.version
         }
     }
 
-    await fs.writeFile(currentPackageJsonPath, JSON.stringify(merged, null, 2))
+    // `...newPackageJson` above drags the generator's own repository metadata
+    // in. Keep whatever the user had, including nothing.
+    for (const field of ['repository', 'bugs', 'homepage']) {
+        if (currentPackageJson[field] === undefined) {
+            delete merged[field]
+        } else {
+            merged[field] = currentPackageJson[field]
+        }
+    }
+
+    await fs.writeFile(
+        currentPackageJsonPath,
+        `${JSON.stringify(merged, null, 2)}\n`
+    )
 }
