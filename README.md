@@ -1,5 +1,8 @@
 # 🛠️ Nera Installer
 
+[![Test](https://github.com/seebaermichi/nera-installer/actions/workflows/test.yml/badge.svg)](https://github.com/seebaermichi/nera-installer/actions/workflows/test.yml)
+[![npm version](https://img.shields.io/npm/v/@nera-static/installer)](https://www.npmjs.com/package/@nera-static/installer)
+
 A simple CLI tool to create new [Nera](https://github.com/seebaermichi/nera) static site projects.
 
 ## 📦 Installation
