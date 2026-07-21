@@ -13,9 +13,9 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # No cheerio here, so Node 18 is genuinely supported and
-                # matches the `engines` floor.
-                node-version: [18, 20, 22]
+                # Node 18 reached EOL 2025-04-30 and the dev toolchain
+                # requires Node 20+; engines is >=20 to match.
+                node-version: [20, 22]
 
         steps:
             - uses: actions/checkout@v4
