@@ -1,6 +1,6 @@
 {
     "name": "@nera-static/installer",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "description": "CLI tool to scaffold new Nera static site projects",
     "bin": {
         "nera": "./bin/cli.js"
@@ -34,7 +34,7 @@
     },
     "homepage": "https://github.com/seebaermichi/nera-installer#readme",
     "engines": {
-        "node": ">=18"
+        "node": ">=20.0.0"
     },
     "private": false,
     "publishConfig": {
