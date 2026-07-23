@@ -10,6 +10,15 @@ export const NERA_REPO_URL = 'https://github.com/seebaermichi/nera.git'
 const defaultInstallDependencies = () =>
     execFileSync('npm', ['install'], { stdio: 'inherit' })
 
+const pathExists = async (p) => {
+    try {
+        await fs.access(p)
+        return true
+    } catch {
+        return false
+    }
+}
+
 export async function updateProject(options = {}) {
     const {
         repoUrl = NERA_REPO_URL,
@@ -46,8 +55,17 @@ export async function updateProject(options = {}) {
         }
         console.log('🔄 Starting update process...')
 
-        // Backup user files
-        const userFiles = ['pages/', 'assets/', 'config/app.yaml']
+        // Backup user files. Revised theme layout (generator ROADMAP-themes.md
+        // §1b, 2026-07-23): a site groups its presentation under `theme/`.
+        // During the deprecation window a site may still use the legacy root
+        // `views/`+`assets/`, so back up whichever the site actually has — its
+        // own layouts and assets must survive the update either way.
+        const userFiles = ['pages/', 'config/app.yaml']
+        if (await pathExists('theme')) {
+            userFiles.push('theme/')
+        } else {
+            userFiles.push('views/', 'assets/')
+        }
         await backupFiles(userFiles)
         backupCreated = true
 
@@ -55,10 +73,11 @@ export async function updateProject(options = {}) {
         console.log('📥 Downloading latest Nera version...')
         execFileSync('git', ['clone', repoUrl, '.nera-temp'], { stdio: 'inherit' })
 
-        // Update core files. `views/` is deliberately not updated: a Nera site
-        // is a clone of the generator, so views/layouts/layout.pug is the user's
-        // own site layout, not a vendor file. Copying it from a fresh clone
-        // would silently reset their design.
+        // Update core files. Only `src/` and `package.json` are refreshed, so a
+        // site's presentation — legacy root `views/`/`assets/`, or `theme/`
+        // under the revised §1b layout — is never overwritten by the clone: it
+        // is the user's own design, not a vendor file. Copying it from a fresh
+        // clone would silently reset their site.
         console.log('🔧 Updating core files...')
         await updateCoreFiles([
             'src/',

@@ -58,8 +58,12 @@ export async function createFixtureRepo(repoDir, version = '4.3.0') {
     await write(repoDir, 'package.json', JSON.stringify(generatorPackageJson(version), null, 2))
     await write(repoDir, 'index.js', 'console.log(\'nera\')\n')
     await write(repoDir, 'src/index.js', 'export function run() {}\n')
-    await write(repoDir, 'views/layouts/layout.pug', 'doctype html\nhtml\n  body\n    block content\n')
-    await write(repoDir, 'views/pages/default.pug', 'extends ../layouts/layout.pug\n')
+    // Revised §1b layout: the generator scaffolds its presentation under theme/,
+    // so a cloned site is theme-shaped (theme/views + theme/assets), not root
+    // views/+assets/.
+    await write(repoDir, 'theme/views/layouts/layout.pug', 'doctype html\nhtml\n  body\n    block content\n')
+    await write(repoDir, 'theme/views/pages/default.pug', 'extends ../layouts/layout.pug\n')
+    await write(repoDir, 'theme/assets/css/site.css', 'body { color: #222; }\n')
     await write(repoDir, 'config/app.yaml', 'lang: en\n')
     await write(repoDir, 'pages/index.md', '---\nlayout: pages/default.pug\n---\n\n# Home\n')
 

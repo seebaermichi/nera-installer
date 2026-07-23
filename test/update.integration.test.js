@@ -117,22 +117,61 @@ describe('nera new -> nera update round trip', () => {
             expect(pkg.repository).toBeUndefined()
         })
 
-        it('preserves user content and layouts', async () => {
+        it('preserves a site\'s theme/ presentation and content', async () => {
             const projectPath = await scaffold()
 
-            const layoutPath = path.join(projectPath, 'views/layouts/layout.pug')
+            // The scaffold is theme-shaped (§1b): its presentation lives under
+            // theme/. Both the layout and the site's own assets there must
+            // survive the update untouched.
+            const layoutPath = path.join(projectPath, 'theme/views/layouts/layout.pug')
+            const cssPath = path.join(projectPath, 'theme/assets/css/site.css')
             const userLayout = 'doctype html\nhtml\n  body\n    h1 My own design\n'
+            const userCss = ':root { --brand: #0b5; }\n'
             await fs.writeFile(layoutPath, userLayout)
+            await fs.writeFile(cssPath, userCss)
             await fs.writeFile(path.join(projectPath, 'pages/about.md'), '---\nlayout: pages/default.pug\n---\n\n# About\n')
 
-            await publishNewVersion(repoDir, '4.4.0')
+            await publishNewVersion(repoDir, '4.4.0', {
+                'src/new-file.js': 'export const added = true\n',
+            })
 
             process.chdir(projectPath)
             await updateProject({ repoUrl: repoDir, install: false })
 
-            // views/ is deliberately not updated -- the layout is the user's own
+            // theme/ is the site's own presentation — never overwritten
             expect(await fs.readFile(layoutPath, 'utf-8')).toBe(userLayout)
+            expect(await fs.readFile(cssPath, 'utf-8')).toBe(userCss)
             expect(fssync.existsSync(path.join(projectPath, 'pages/about.md'))).toBe(true)
+            // core files still refreshed
+            expect(fssync.existsSync(path.join(projectPath, 'src/new-file.js'))).toBe(true)
+        })
+
+        it('preserves a legacy root-layout site during the deprecation window', async () => {
+            const projectPath = await scaffold()
+
+            // Simulate a site that has not migrated to theme/: its presentation
+            // is at the legacy root views/ + assets/. The installer must back
+            // up/restore that shape too (§7 revised, the else-branch).
+            await fs.rm(path.join(projectPath, 'theme'), { recursive: true, force: true })
+            const layoutPath = path.join(projectPath, 'views/layouts/layout.pug')
+            const cssPath = path.join(projectPath, 'assets/css/site.css')
+            const userLayout = 'doctype html\nhtml\n  body\n    h1 Legacy design\n'
+            const userCss = 'body { color: #222; }\n'
+            await fs.mkdir(path.dirname(layoutPath), { recursive: true })
+            await fs.mkdir(path.dirname(cssPath), { recursive: true })
+            await fs.writeFile(layoutPath, userLayout)
+            await fs.writeFile(cssPath, userCss)
+
+            await publishNewVersion(repoDir, '4.4.0', {
+                'src/new-file.js': 'export const added = true\n',
+            })
+
+            process.chdir(projectPath)
+            await updateProject({ repoUrl: repoDir, install: false })
+
+            expect(await fs.readFile(layoutPath, 'utf-8')).toBe(userLayout)
+            expect(await fs.readFile(cssPath, 'utf-8')).toBe(userCss)
+            expect(fssync.existsSync(path.join(projectPath, 'src/new-file.js'))).toBe(true)
         })
 
         it('tolerates a pre-2.0.0 project with no nera.version stamp', async () => {

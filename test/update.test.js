@@ -143,7 +143,7 @@ describe('updateProject', () => {
         })
 
         it('handles a project missing the optional user directories', async () => {
-            await fs.rm(path.join(projectPath, 'assets'), { recursive: true, force: true })
+            await fs.rm(path.join(projectPath, 'theme'), { recursive: true, force: true })
             await publishNewVersion(repoDir, '4.4.0')
 
             process.chdir(projectPath)
