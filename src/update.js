@@ -1,6 +1,7 @@
 import { execFileSync } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
+import { satisfies, validRange } from 'semver'
 
 export const NERA_REPO_URL = 'https://github.com/seebaermichi/nera.git'
 
@@ -73,6 +74,22 @@ export async function updateProject(options = {}) {
         console.log('📥 Downloading latest Nera version...')
         execFileSync('git', ['clone', repoUrl, '.nera-temp'], { stdio: 'inherit' })
 
+        // The version of the generator we are about to install, read from the
+        // clone's OWN package.json — this is the number a theme's `nera.generator`
+        // range must be checked against (generator ROADMAP-themes.md §5). Held
+        // now, before `.nera-temp` is removed in `finally`, and used for the
+        // theme-compatibility heads-up after the update lands.
+        let newGeneratorVersion = null
+        try {
+            const clonedPkg = JSON.parse(
+                await fs.readFile(path.join('.nera-temp', 'package.json'), 'utf-8')
+            )
+            newGeneratorVersion = clonedPkg.version || null
+        } catch {
+            // A clone without a readable package.json is unexpected, but the
+            // compat check is advisory — skip it rather than abort the update.
+        }
+
         // Update core files. Only `src/` and `package.json` are refreshed, so a
         // site's presentation — legacy root `views/`/`assets/`, or `theme/`
         // under the revised §1b layout — is never overwritten by the clone: it
@@ -99,6 +116,13 @@ export async function updateProject(options = {}) {
         await fs.rm('.nera-backup', { recursive: true, force: true })
 
         console.log('✅ Updated to latest Nera version!')
+
+        // Heads-up if an installed theme declares it needs a generator the one we
+        // just installed does not satisfy (§5). Advisory only, and printed after
+        // the success line — the update itself succeeded; this tells the user what
+        // to do next.
+        await warnOnThemeGeneratorMismatch(newGeneratorVersion)
+
         console.log('👉 Run `npm run dev` to start developing')
 
     } catch (error) {
@@ -123,6 +147,65 @@ export async function updateProject(options = {}) {
         // Always, so a failed run does not leave a stale .nera-temp that makes
         // the next `nera update` abort with "destination path already exists".
         await fs.rm('.nera-temp', { recursive: true, force: true })
+    }
+}
+
+// ROADMAP-themes.md §5/§7: `nera update` is the moment the generator version
+// actually changes, and a theme's `nera.generator` compatibility range is the one
+// thing npm cannot enforce — the generator is git-cloned, not a package, so it
+// never appears in anyone's `peerDependencies`. So after the update lands, check
+// every installed dependency that declares a `nera.generator` range against the
+// version just installed, and WARN on a mismatch.
+//
+// WARN, not fail, for two reasons: the core update itself is legitimate and must
+// not be blocked by a theme that lags a release behind, and the generator's OWN
+// build-time check is the hard gate (it fails the very next build). This is the
+// earlier, actionable heads-up at the moment the version changes. It is fully
+// advisory — it never throws, so it can never turn a successful update into a
+// failure. A themeless site (nothing declares `nera.generator`) sees nothing.
+//
+// The version is read from the clone's own package.json, never the site's
+// `package.json` version, which is a clone-flow artefact (§5 "trap"). Scoped to
+// the project's declared dependencies, so it needs no YAML parsing and no
+// knowledge of the `theme:` key — the theme is simply whatever ships the field.
+async function warnOnThemeGeneratorMismatch(newGeneratorVersion) {
+    if (!newGeneratorVersion) return
+
+    let projectPkg
+    try {
+        projectPkg = JSON.parse(await fs.readFile('package.json', 'utf-8'))
+    } catch {
+        return
+    }
+
+    const deps = {
+        ...projectPkg.dependencies,
+        ...projectPkg.devDependencies,
+    }
+
+    for (const name of Object.keys(deps)) {
+        try {
+            const depPkg = JSON.parse(
+                await fs.readFile(
+                    path.join('node_modules', name, 'package.json'),
+                    'utf-8'
+                )
+            )
+            const range = depPkg?.nera?.generator
+            if (!range || !validRange(range)) continue
+
+            if (!satisfies(newGeneratorVersion, range)) {
+                console.warn(
+                    `⚠️  Theme "${name}" supports Nera generator ${range}, but ` +
+                        `you just updated to ${newGeneratorVersion}. Your builds ` +
+                        `may fail — update the theme (npm update ${name}) or ` +
+                        'check its changelog for a compatible version.'
+                )
+            }
+        } catch {
+            // Dependency not installed or its package.json unreadable — nothing
+            // to check for it. Never fatal: the update already succeeded.
+        }
     }
 }
 

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-07-24
+
+### Added
+
+-   `nera update` now warns when the generator version it just installed is
+    outside an installed theme's declared `nera.generator` compatibility range.
+    A theme cannot express "requires generator >= X" through npm — the generator
+    is git-cloned, not a package — so `nera update`, the command that changes the
+    generator version, is the only place this can be checked (see the generator's
+    `ROADMAP-themes.md` §5/§7). It is a **warning, not a failure**: the core
+    update itself is legitimate and the generator's own build-time check is the
+    hard gate. The version checked is the freshly cloned generator's own
+    `package.json` version, and any dependency declaring `nera.generator` is
+    checked, so a themeless project sees nothing. Adds `semver` as the first
+    runtime dependency, matching the generator's range semantics exactly
+
 ## [2.1.0] - 2026-07-21
 
 ### Changed

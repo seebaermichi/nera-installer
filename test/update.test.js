@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fs from 'fs/promises'
 import fssync from 'fs'
 import path from 'path'
@@ -167,6 +167,98 @@ describe('updateProject', () => {
 
             expect(fssync.existsSync(path.join(projectPath, '.nera-backup'))).toBe(false)
             expect(fssync.existsSync(path.join(projectPath, '.nera-temp'))).toBe(false)
+        })
+    })
+
+    // ROADMAP-themes.md §5/§7: after `nera update` changes the generator version,
+    // an installed theme declaring a `nera.generator` range the new version does
+    // not satisfy gets a heads-up. WARN only — the update still succeeds.
+    describe('theme generator compatibility (§5)', () => {
+        afterEach(() => {
+            vi.restoreAllMocks()
+        })
+
+        // Simulate an installed theme package: a package.json under the project's
+        // node_modules declaring a nera.generator range. install:false leaves
+        // node_modules for us to shape, and the update never touches it.
+        const installTheme = async (name, generatorRange) => {
+            const dir = path.join(projectPath, 'node_modules', ...name.split('/'))
+            await fs.mkdir(dir, { recursive: true })
+            await fs.writeFile(
+                path.join(dir, 'package.json'),
+                JSON.stringify({
+                    name,
+                    version: '1.0.0',
+                    nera: { generator: generatorRange },
+                })
+            )
+        }
+
+        const themeWarn = /supports Nera generator/
+
+        it('warns when the updated generator is outside the theme range', async () => {
+            await patchProjectPackageJson({
+                dependencies: { '@nera-static/theme-x': '^1.0.0' },
+            })
+            await installTheme('@nera-static/theme-x', '>=5.0.0')
+            await publishNewVersion(repoDir, '4.6.0')
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+            process.chdir(projectPath)
+            await updateProject({ repoUrl: repoDir, install: false })
+
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringMatching(/theme-x.*>=5\.0\.0.*4\.6\.0/s)
+            )
+        })
+
+        it('is silent when the updated generator satisfies the theme range', async () => {
+            await patchProjectPackageJson({
+                dependencies: { '@nera-static/theme-x': '^1.0.0' },
+            })
+            await installTheme('@nera-static/theme-x', '>=4.0.0')
+            await publishNewVersion(repoDir, '4.6.0')
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+            process.chdir(projectPath)
+            await updateProject({ repoUrl: repoDir, install: false })
+
+            expect(warn).not.toHaveBeenCalledWith(
+                expect.stringMatching(themeWarn)
+            )
+        })
+
+        it('is silent for a themeless project (nothing declares nera.generator)', async () => {
+            await publishNewVersion(repoDir, '4.6.0')
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+            process.chdir(projectPath)
+            await updateProject({ repoUrl: repoDir, install: false })
+
+            expect(warn).not.toHaveBeenCalledWith(
+                expect.stringMatching(themeWarn)
+            )
+        })
+
+        it('still completes the update successfully despite a mismatch', async () => {
+            await patchProjectPackageJson({
+                dependencies: { '@nera-static/theme-x': '^1.0.0' },
+            })
+            await installTheme('@nera-static/theme-x', '>=5.0.0')
+            await publishNewVersion(repoDir, '4.6.0')
+            vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+            process.chdir(projectPath)
+            await expect(
+                updateProject({ repoUrl: repoDir, install: false })
+            ).resolves.not.toThrow()
+
+            // the warning did not abort the update — core files were still merged
+            const pkg = JSON.parse(
+                await fs.readFile(path.join(projectPath, 'package.json'), 'utf-8')
+            )
+            expect(pkg.nera.version).toBe('4.6.0')
+            expect(fssync.existsSync(path.join(projectPath, '.nera-backup'))).toBe(false)
         })
     })
 })
