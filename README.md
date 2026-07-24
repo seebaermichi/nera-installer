@@ -3,6 +3,28 @@
 [![Test](https://github.com/seebaermichi/nera-installer/actions/workflows/test.yml/badge.svg)](https://github.com/seebaermichi/nera-installer/actions/workflows/test.yml)
 [![npm version](https://img.shields.io/npm/v/@nera-static/installer)](https://www.npmjs.com/package/@nera-static/installer)
 
+> ## ⚠️ Deprecated — use [`@nera-static/nera`](https://github.com/seebaermichi/nera-cli)
+>
+> This package is superseded by **`@nera-static/nera`**, the one Nera CLI. Nera
+> sites are no longer git clones of the generator that carry the engine under
+> `src/`; a scaffolded site now depends on the published `@nera-static/core`
+> engine, and a single `nera` command scaffolds, builds, previews, updates and
+> validates it (see [ROADMAP-core.md](https://github.com/seebaermichi/nera/blob/main/ROADMAP-core.md)).
+>
+> | Old (`@nera-static/installer`) | New (`@nera-static/nera`) |
+> |---|---|
+> | `npx @nera-static/installer new my-site` | `npx @nera-static/nera new my-site` |
+> | `nera update` (re-clone + restore) | `nera update` (`npm update`; `--migrate` converts a clone) |
+> | — | `nera build` / `nera dev` / `nera serve` / `nera validate` |
+>
+> **Migrating an existing cloned site:** install the new CLI and run
+> `nera update --migrate` inside the site — it adds the `@nera-static/nera`
+> dependency, rewrites the scripts, removes the vendored `src/` engine, and
+> installs, leaving your `pages/`, `config/` and `theme/` untouched.
+>
+> The documentation below describes the deprecated clone-based behaviour and is
+> kept for existing users.
+
 A simple CLI tool to create new [Nera](https://github.com/seebaermichi/nera) static site projects.
 
 ## 📦 Installation
