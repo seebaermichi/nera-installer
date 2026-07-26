@@ -27,6 +27,8 @@
 
 A simple CLI tool to create new [Nera](https://github.com/seebaermichi/nera) static site projects.
 
+📖 **Documentation:** [nera.js.org](https://nera.js.org)
+
 ## 📦 Installation
 
 ```bash
