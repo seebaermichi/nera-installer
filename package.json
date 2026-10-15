@@ -3,7 +3,7 @@
     "version": "2.2.0",
     "description": "CLI tool to scaffold new Nera static site projects",
     "bin": {
-        "nera": "./bin/cli.js"
+        "nera": "bin/cli.js"
     },
     "type": "module",
     "files": [
@@ -27,7 +27,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/seebaermichi/nera-installer.git"
+        "url": "git+https://github.com/seebaermichi/nera-installer.git"
     },
     "bugs": {
         "url": "https://github.com/seebaermichi/nera-installer/issues"
