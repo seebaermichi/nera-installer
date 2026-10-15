@@ -27,3 +27,4 @@ coverage/
 *.temp
 .cache/
 .nera-test-*/
+plans/
