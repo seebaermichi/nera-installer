@@ -9,7 +9,7 @@
 > sites are no longer git clones of the generator that carry the engine under
 > `src/`; a scaffolded site now depends on the published `@nera-static/core`
 > engine, and a single `nera` command scaffolds, builds, previews, updates and
-> validates it (see [ROADMAP-core.md](https://github.com/seebaermichi/nera/blob/main/ROADMAP-core.md)).
+> validates it.
 >
 > | Old (`@nera-static/installer`) | New (`@nera-static/nera`) |
 > |---|---|
