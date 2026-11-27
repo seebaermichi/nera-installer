@@ -1,35 +1,33 @@
-# Node.js
+# Dependencies
 node_modules/
-dist/
-build/
-.env
-.env.local
-*.log
+
+# Logs
 npm-debug.log*
 
-# Credentials — never commit; publishing uses OIDC, not a token
+# Environment and credentials: never commit
+.env
+.env.local
 .npmrc
 
-# Mac system files
+# OS and editor
 .DS_Store
 Thumbs.db
-
-# Editor
 .vscode/
 
-# Test output
-.nyc_output/
+# Test and build output
 coverage/
 .vitest/
-
-# Temp folders
-*.tmp
-*.temp
+.tmp/
+dist/
+build/
 .cache/
-.nera-test-*/
-plans/
+.nera-cache/
+
+# Browser-test artifacts (Playwright MCP)
+.playwright-mcp/
 
 # Internal development files (plans, Snagio workflow, specs) never belong in the repo
+plans/
 /.claude/
 /.mcp.json
 /ROADMAP*.md
